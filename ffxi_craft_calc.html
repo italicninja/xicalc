@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFXI Craft Calculator — HorizonXI</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ── tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0e0d0b;
+  --surface:   #181510;
+  --panel:     #1f1c16;
+  --border:    rgba(180,150,80,0.18);
+  --border-hi: rgba(200,170,90,0.4);
+  --gold:      #c8a84a;
+  --gold-dim:  #7a6030;
+  --gold-pale: #e8d48a;
+  --text:      #e8dfc8;
+  --text-dim:  #8a7d60;
+  --text-faint:#4a4030;
+  --green:     #4a9e5c;
+  --red:       #c84040;
+  --blue:      #5888c8;
+  --radius:    3px;
+  --mono:      'Source Code Pro', monospace;
+  --serif:     'IM Fell English', Georgia, serif;
+  --sans:      'Source Sans 3', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+/* ── layout ─────────────────────────────────────────────── */
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.main { padding: 2rem; max-width: 860px; }
+
+/* ── sidebar ─────────────────────────────────────────────── */
+.sidebar-head { padding: 1.25rem 1rem 1rem; border-bottom: 1px solid var(--border); }
+.sidebar-logo { font-family: var(--serif); font-size: 1.1rem; color: var(--gold); line-height: 1.2; }
+.sidebar-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: var(--mono); letter-spacing: 0.05em; }
+.craft-nav { padding: 0.5rem 0; }
+.craft-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 1rem; background: none; border: none; cursor: pointer; color: var(--text-dim); font-family: var(--sans); font-size: 13px; text-align: left; transition: background 0.1s, color 0.1s; }
+.craft-btn:hover { background: rgba(200,168,74,0.06); color: var(--text); }
+.craft-btn.active { background: rgba(200,168,74,0.12); color: var(--gold); border-right: 2px solid var(--gold); }
+.craft-icon { font-size: 16px; width: 20px; text-align: center; }
+.craft-count { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+.sidebar-section { padding: 0.4rem 1rem 0.25rem; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); font-family: var(--mono); margin-top: 0.5rem; }
+
+/* ── header ─────────────────────────────────────────────── */
+.page-head { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.page-title { font-family: var(--serif); font-size: 1.6rem; color: var(--gold-pale); font-style: italic; }
+.page-desc { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+/* ── recipe picker ───────────────────────────────────────── */
+.recipe-search { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.recipe-search input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; color: var(--text); font-family: var(--sans); font-size: 14px; }
+.recipe-search input:focus { outline: none; border-color: var(--border-hi); }
+.recipe-search input::placeholder { color: var(--text-faint); }
+
+.recipe-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 1.5rem; max-height: 320px; overflow-y: auto; }
+.recipe-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: border-color 0.1s, background 0.1s; }
+.recipe-card:hover { border-color: var(--border-hi); background: rgba(200,168,74,0.05); }
+.recipe-card.selected { border-color: var(--gold); background: rgba(200,168,74,0.08); }
+.rc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.rc-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: var(--mono); }
+.rc-npc { font-size: 11px; color: var(--gold-dim); margin-top: 2px; }
+
+/* ── calculator ─────────────────────────────────────────── */
+.calc-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.calc-title { font-family: var(--serif); font-size: 1.1rem; color: var(--gold-pale); margin-bottom: 0.2rem; }
+.calc-subtitle { font-size: 12px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 1rem; }
+
+.ing-grid { display: grid; grid-template-columns: 1fr auto; gap: 0; }
+.ing-row { display: contents; }
+.ing-row:not(:last-child) > * { border-bottom: 1px solid var(--border); }
+.ing-label { padding: 8px 0; font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; }
+.ing-qty { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-left: 4px; }
+.ing-input { padding: 8px 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.ing-input input { width: 110px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.ing-input input:focus { outline: none; border-color: var(--border-hi); }
+.ing-unit { font-size: 11px; color: var(--text-faint); font-family: var(--mono); white-space: nowrap; }
+
+/* break rate row */
+.break-row { display: flex; align-items: center; gap: 12px; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.break-label { font-size: 13px; color: var(--text-dim); flex: 1; }
+.break-input { display: flex; align-items: center; gap: 6px; }
+.break-input input { width: 70px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.break-input input:focus { outline: none; border-color: var(--border-hi); }
+
+/* ── results ─────────────────────────────────────────────── */
+.results-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; text-align: center; }
+.stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); font-family: var(--mono); margin-bottom: 4px; }
+.stat-value { font-family: var(--serif); font-size: 1.25rem; color: var(--text); }
+.stat-value.pos { color: var(--green); }
+.stat-value.neg { color: var(--red); }
+.stat-value.dim { color: var(--text-dim); }
+
+.breakdown { width: 100%; border-collapse: collapse; font-size: 12px; }
+.breakdown td { padding: 5px 0; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+.breakdown td:first-child { color: var(--text-dim); font-family: var(--sans); font-size: 13px; }
+.breakdown td:last-child { text-align: right; color: var(--text); }
+.breakdown .total-row td { border-top: 1px solid var(--border-hi); border-bottom: none; padding-top: 8px; color: var(--gold); font-weight: 600; }
+
+/* ── gph panel ───────────────────────────────────────────── */
+.gph-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.75rem; }
+.gph-input { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gph-input label { font-size: 13px; color: var(--text-dim); }
+.gph-input input { width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.gph-input input:focus { outline: none; border-color: var(--border-hi); }
+
+.note { font-size: 11px; color: var(--text-dim); padding: 6px 10px; border-left: 2px solid var(--gold-dim); background: rgba(200,168,74,0.04); margin-top: 0.75rem; font-style: italic; }
+
+/* ── empty state ─────────────────────────────────────────── */
+.empty { text-align: center; padding: 3rem 2rem; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.empty-title { font-family: var(--serif); font-size: 1.2rem; color: var(--text-dim); font-style: italic; }
+.empty-sub { font-size: 13px; color: var(--text-faint); margin-top: 0.5rem; }
+
+/* ── misc ────────────────────────────────────────────────── */
+.tag { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 6px; border-radius: 2px; background: rgba(200,168,74,0.12); color: var(--gold-dim); margin-right: 4px; }
+.tag.sub { background: rgba(88,136,200,0.12); color: var(--blue); }
+.divider { height: 1px; background: var(--border); margin: 1rem 0; }
+@media (max-width: 640px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .results-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ───────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-head">
+    <div class="sidebar-logo">FFXI Craft<br>Calculator</div>
+    <div class="sidebar-sub">HorizonXI · Era accurate</div>
+  </div>
+  <div class="craft-nav" id="craft-nav"></div>
+</aside>
+
+<!-- ── MAIN ──────────────────────────────────────────────── -->
+<main class="main" id="main">
+  <div class="empty">
+    <div class="empty-icon">⚒</div>
+    <div class="empty-title">Choose a craft to begin</div>
+    <div class="empty-sub">Select a guild from the sidebar</div>
+  </div>
+</main>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   RECIPE DATABASE
+   Fields: name, craft, cap, subcrafts:[{craft,cap}],
+           crystal, yield, hqYield, hq2Yield, hq3Yield,
+           hqResult, ingredients:[{name,qty,npc?}],
+           npcSell (resale price), stackable
+═══════════════════════════════════════════════════════════ */
+const RECIPES = [
+
+  /* ── CLOTHCRAFT ─────────────────────────────────────────── */
+  { craft:'Clothcraft', name:'Linen Thread', cap:19, crystal:'Lightning',
+    ingredients:[{name:'Flax Flower',qty:2}],
+    yield:1, npcSell:156 },
+  { craft:'Clothcraft', name:'Linen Thread (spinning)', cap:19, crystal:'Lightning',
+    tool:'Spinning',
+    ingredients:[{name:'Flax Flower',qty:6},{name:'Spindle',qty:1,npc:77}],
+    yield:3, hqYield:6, hq2Yield:9, hq3Yield:12, npcSell:156 },
+  { craft:'Clothcraft', name:'Linen Cloth', cap:22, crystal:'Earth',
+    ingredients:[{name:'Linen Thread',qty:3,npc:156}],
+    yield:1, npcSell:615 },
+  { craft:'Clothcraft', name:'Silk Thread', cap:51, crystal:'Lightning',
+    ingredients:[{name:'Crawler Cocoon',qty:2}],
+    yield:1, npcSell:208 },
+  { craft:'Clothcraft', name:'Silk Thread (spinning)', cap:51, crystal:'Lightning',
+    tool:'Spinning',
+    ingredients:[{name:'Crawler Cocoon',qty:6},{name:'Spindle',qty:1,npc:77}],
+    yield:3, hqYield:6, hq2Yield:9, hq3Yield:12, npcSell:208 },
+  { craft:'Clothcraft', name:'Silk Cloth', cap:53, crystal:'Earth',
+    ingredients:[{name:'Silk Thread',qty:3,npc:208}],
+    yield:1, npcSell:1076 },
+  { craft:'Clothcraft', name:'Gold Thread', cap:58,
+    subcrafts:[{craft:'Goldsmithing',cap:41}], crystal:'Earth',
+    ingredients:[{name:'Gold Ingot',qty:1,npc:2152},{name:'Silk Thread',qty:1,npc:208}],
+    yield:2, hqYield:4, hq2Yield:6, hq3Yield:8, npcSell:1168 },
+  { craft:'Clothcraft', name:'Gold Thread (spinning)', cap:58,
+    subcrafts:[{craft:'Goldsmithing',cap:41}], crystal:'Earth', tool:'Spinning',
+    ingredients:[{name:'Gold Ingot',qty:3,npc:2152},{name:'Silk Thread',qty:3,npc:208},{name:'Spindle',qty:1,npc:77}],
+    yield:6, hqYield:8, hq2Yield:12, npcSell:1168 },
+  { craft:'Clothcraft', name:'War Brais', cap:83, crystal:'Earth',
+    ingredients:[{name:'Linen Cloth',qty:2,npc:615},{name:'Gold Thread',qty:1,npc:1168},{name:'Tiger Leather',qty:1}],
+    hqResult:'War Brais +1', yield:1, npcSell:10009 },
+  { craft:'Clothcraft', name:'War Gloves', cap:81, crystal:'Earth',
+    ingredients:[{name:'Rainbow Thread',qty:1},{name:'Saruta Cotton',qty:2},{name:'Velvet Cloth',qty:2}],
+    hqResult:'War Gloves +1', yield:1, npcSell:6155 },
+  { craft:'Clothcraft', name:'War Aketon', cap:86,
+    subcrafts:[{craft:'Goldsmithing',cap:51},{craft:'Leathercraft',cap:42}], crystal:'Earth',
+    ingredients:[{name:'Gold Ingot',qty:1,npc:2152},{name:'Saruta Cotton',qty:2},{name:'Velvet Cloth',qty:2},{name:'Gold Thread',qty:1,npc:1168},{name:'Tiger Leather',qty:2}],
+    hqResult:'War Aketon +1', yield:1, npcSell:11193 },
+  { craft:'Clothcraft', name:"Noble's Tunic", cap:87, crystal:'Earth',
+    ingredients:[{name:'Gold Thread',qty:2,npc:1168},{name:'Rainbow Cloth',qty:1},{name:'Shining Cloth',qty:1},{name:'Silk Cloth',qty:1,npc:1076},{name:'Silver Thread',qty:1},{name:'Velvet Cloth',qty:2}],
+    hqResult:"Aristocrat's Coat", yield:1, npcSell:10077 },
+
+  /* ── GOLDSMITHING ─────────────────────────────────────── */
+  { craft:'Goldsmithing', name:'Brass Ingot', cap:9, crystal:'Fire',
+    ingredients:[{name:'Copper Ore',qty:3},{name:'Zinc Ore',qty:1}],
+    yield:1, npcSell:51 },
+  { craft:'Goldsmithing', name:'Silver Ingot', cap:18, crystal:'Fire',
+    ingredients:[{name:'Silver Beastcoin',qty:4}],
+    yield:1, npcSell:358 },
+  { craft:'Goldsmithing', name:'Gold Ingot', cap:51, crystal:'Fire',
+    ingredients:[{name:'Gold Beastcoin',qty:4}],
+    yield:1, npcSell:2152 },
+  { craft:'Goldsmithing', name:'Koenig Shield / Kaiser Shield', cap:97,
+    subcrafts:[{craft:'Smithing',cap:58}], crystal:'Earth',
+    ingredients:[{name:'Adaman Sheet',qty:1,npc:4012},{name:'Gold Ingot',qty:1,npc:2152},{name:'Gold Sheet',qty:1},{name:"General's Shield",qty:1}],
+    hqResult:'Kaiser Shield', yield:1, npcSell:null },
+
+  /* ── SMITHING ────────────────────────────────────────────── */
+  { craft:'Smithing', name:'Iron Ingot', cap:23, crystal:'Fire',
+    ingredients:[{name:'Iron Ore',qty:3}],
+    yield:1, npcSell:null },
+  { craft:'Smithing', name:'Iron Sheet', cap:26, crystal:'Fire',
+    ingredients:[{name:'Iron Ingot',qty:1}],
+    yield:1, npcSell:null },
+  { craft:'Smithing', name:'Darksteel Ingot', cap:52, crystal:'Fire',
+    ingredients:[{name:'Darksteel Ore',qty:1},{name:'Iron Ore',qty:3}],
+    yield:1, npcSell:2434 },
+  { craft:'Smithing', name:'Darksteel Sheet', cap:55, crystal:'Fire',
+    ingredients:[{name:'Darksteel Ingot',qty:1,npc:2434}],
+    yield:1, npcSell:2907 },
+  { craft:'Smithing', name:'Gauntlets', cap:57, crystal:'Fire',
+    ingredients:[{name:'Iron Sheet',qty:2},{name:'Leather Gloves',qty:2}],
+    hqResult:'Gauntlets +1', yield:1, npcSell:2952 },
+  { craft:'Smithing', name:'Darksteel Cuisses', cap:81, crystal:'Fire',
+    ingredients:[{name:'Darksteel Sheet',qty:2,npc:2907},{name:'Ram Leather',qty:1,npc:619}],
+    hqResult:'Darksteel Cuisses +1', yield:1, npcSell:6500 },
+  { craft:'Smithing', name:'Darksteel Maul', cap:82, crystal:'Fire',
+    ingredients:[{name:'Darksteel Ingot',qty:2,npc:2434},{name:'Mahogany Lumber',qty:1,npc:1127}],
+    hqResult:'Darksteel Maul +1', yield:1, npcSell:6012 },
+  { craft:'Smithing', name:'Adaman Ingot', cap:90, crystal:'Fire',
+    ingredients:[{name:'Adaman Ore',qty:3},{name:'Iron Ore',qty:1}],
+    yield:1, npcSell:3715 },
+  { craft:'Smithing', name:'Adaman Sheet', cap:85, crystal:'Fire',
+    ingredients:[{name:'Adaman Ingot',qty:1,npc:3715}],
+    yield:1, npcSell:4012 },
+  { craft:'Smithing', name:'Cursed Hauberk', cap:96,
+    subcrafts:[{craft:'Clothcraft',cap:48},{craft:'Goldsmithing',cap:30}], crystal:'Earth',
+    ingredients:[{name:'Adaman Chain',qty:1},{name:'Adaman Sheet',qty:1,npc:4012},{name:'Brass Ingot',qty:1,npc:51},{name:'Gold Thread',qty:1,npc:1168},{name:'Hauberk',qty:1},{name:'Rainbow Cloth',qty:1},{name:'Sheep Leather',qty:1},{name:'Southern Pearl',qty:1}],
+    hqResult:'Cursed Hauberk -1', yield:1, npcSell:27705 },
+
+  /* ── LEATHERCRAFT ─────────────────────────────────────── */
+  { craft:'Leathercraft', name:'Ram Leather', cap:35, crystal:'Dark',
+    ingredients:[{name:'Windurstian Tea Leaves',qty:1},{name:'Ram Skin',qty:1},{name:'Distilled Water',qty:1}],
+    yield:1, npcSell:619 },
+  { craft:'Leathercraft', name:'Black Tiger Leather', cap:56, crystal:'Dark',
+    ingredients:[{name:'Rock Salt',qty:1},{name:'Black Tiger Skin',qty:1},{name:'Distilled Water',qty:1}],
+    yield:1, npcSell:null },
+  { craft:'Leathercraft', name:'Scorpion Harness', cap:69,
+    subcrafts:[{craft:'Bonecraft',cap:33}], crystal:'Earth',
+    ingredients:[{name:'Venomous Claw',qty:1},{name:'Scorpion Shell',qty:2},{name:'Ram Leather',qty:2,npc:619}],
+    hqResult:'Scorpion Harness +1', yield:1, npcSell:6995 },
+
+  /* ── ALCHEMY ─────────────────────────────────────────── */
+  { craft:'Alchemy', name:'Poison Potion', cap:18, crystal:'Water',
+    ingredients:[{name:'Mercury',qty:1},{name:'Poison Dust',qty:1}],
+    yield:1, npcSell:102 },
+  { craft:'Alchemy', name:'Firesand', cap:39, crystal:'Earth',
+    ingredients:[{name:'Bomb Ash',qty:2},{name:'Yuhtunga Sulfur',qty:1}],
+    yield:3, hqYield:6, hq2Yield:9, hq3Yield:12, npcSell:328 },
+  { craft:'Alchemy', name:'Hi-Potion', cap:60, crystal:'Water',
+    ingredients:[{name:'Sage',qty:2},{name:'Distilled Water',qty:1},{name:'Malboro Vine',qty:1}],
+    hqResult:'Hi-Potion +1 / +2 / +3', yield:1, npcSell:256 },
+  { craft:'Alchemy', name:'Venom Potion', cap:68, crystal:'Water',
+    ingredients:[{name:'Venom Dust',qty:1},{name:'Mercury',qty:1}],
+    yield:1, npcSell:531 },
+
+  /* ── COOKING ─────────────────────────────────────────── */
+  { craft:'Cooking', name:'Apple Juice', cap:20, crystal:'Water',
+    ingredients:[{name:'Faerie Apple',qty:4}],
+    yield:1, npcSell:110 },
+  { craft:'Cooking', name:"Jack-o'-Lantern", cap:38, crystal:'Fire',
+    ingredients:[{name:'Ogre Pumpkin',qty:1},{name:'Beeswax',qty:1}],
+    yield:1, npcSell:205 },
+  { craft:'Cooking', name:'Yagudo Drink', cap:60, crystal:'Dark',
+    ingredients:[{name:'Yagudo Cherry',qty:1},{name:'Buburimu Grape',qty:3}],
+    yield:1, npcSell:358 },
+  { craft:'Cooking', name:'Tavnazian Taco', cap:81, crystal:'Earth',
+    ingredients:[{name:'Salsa',qty:1},{name:'Tavnazian Salad',qty:1},{name:'Tortilla',qty:2}],
+    hqResult:'Leremieu Taco', yield:6, hqYield:12, npcSell:531 },
+  { craft:'Cooking', name:'Sole Sushi', cap:84, crystal:'Earth', tool:'Raw Fish Handling',
+    ingredients:[{name:'Black Sole',qty:1},{name:'Ground Wasabi',qty:1},{name:'Tarutaru Rice',qty:1},{name:'Rice Vinegar',qty:1},{name:'Distilled Water',qty:1}],
+    hqResult:'Sole Sushi +1', yield:2, hqYield:3, hq2Yield:4, npcSell:973 },
+  { craft:'Cooking', name:'Rolanberry Pie', cap:90, crystal:'Fire',
+    ingredients:[{name:'Bird Egg',qty:1},{name:'Gelatin',qty:1},{name:'Maple Sugar',qty:1},{name:'Pie Dough',qty:1},{name:'Rolanberry',qty:1},{name:"San d'Orian Flour",qty:1},{name:'Selbina Milk',qty:1}],
+    hqResult:'Rolanberry Pie +1', yield:4, hqYield:null, npcSell:143 },
+
+  /* ── WOODWORKING ─────────────────────────────────────── */
+  { craft:'Woodworking', name:'Mahogany Lumber', cap:51, crystal:'Wind',
+    ingredients:[{name:'Mahogany Log',qty:1}],
+    yield:1, hqYield:2, hq2Yield:3, hq3Yield:4, npcSell:1127 },
+  { craft:'Woodworking', name:'Ebony Lumber', cap:61, crystal:'Wind',
+    ingredients:[{name:'Ebony Log',qty:1}],
+    yield:1, hqYield:2, hq2Yield:3, hq3Yield:4, npcSell:1312 },
+  { craft:'Woodworking', name:'Poison Arrow', cap:28, crystal:'Earth',
+    ingredients:[{name:'Arrowwood Lumber',qty:1},{name:'Chocobo Fletchings',qty:1},{name:'Poison Arrowheads',qty:1}],
+    yield:33, hqYield:66, hq2Yield:99, npcSell:null },
+  { craft:'Woodworking', name:'Kabura Arrow', cap:91,
+    subcrafts:[{craft:'Bonecraft',cap:53}], crystal:'Earth',
+    ingredients:[{name:'Bamboo Stick',qty:1},{name:'Karimata Arrowheads',qty:1},{name:'Giant Bird Fletchings',qty:1},{name:'Ram Horn',qty:1}],
+    yield:33, hqYield:66, hq2Yield:99, npcSell:15 },
+
+  /* ── BONECRAFT ───────────────────────────────────────── */
+  { craft:'Bonecraft', name:'Scorpion Harness', cap:69,
+    subcrafts:[{craft:'Leathercraft',cap:33}], crystal:'Earth',
+    ingredients:[{name:'Venomous Claw',qty:1},{name:'Scorpion Shell',qty:2},{name:'Ram Leather',qty:2,npc:619}],
+    hqResult:'Scorpion Harness +1', yield:1, npcSell:6995 },
+];
+
+/* ── CRAFT METADATA ────────────────────────────────────── */
+const CRAFTS = [
+  { id:'Clothcraft',  icon:'🧵', color:'#c8a84a' },
+  { id:'Goldsmithing',icon:'🔩', color:'#f0c040' },
+  { id:'Smithing',    icon:'⚒', color:'#a0b8d0' },
+  { id:'Leathercraft',icon:'🪵', color:'#c87040' },
+  { id:'Alchemy',     icon:'⚗️', color:'#80c890' },
+  { id:'Cooking',     icon:'🍳', color:'#e08858' },
+  { id:'Woodworking', icon:'🪵', color:'#a07848' },
+  { id:'Bonecraft',   icon:'🦴', color:'#d0c8b0' },
+];
+
+/* ── STATE ──────────────────────────────────────────────── */
+let currentCraft = null;
+let selectedRecipe = null;
+let prices = {};       // itemName → price (user-entered)
+let breakRate = 0;
+let synthsPerHr = 120;
+let hoursPerSess = 1;
+
+/* ── INIT ───────────────────────────────────────────────── */
+function init() {
+  const nav = document.getElementById('craft-nav');
+  CRAFTS.forEach(c => {
+    const count = RECIPES.filter(r => r.craft === c.id).length;
+    const btn = document.createElement('button');
+    btn.className = 'craft-btn';
+    btn.dataset.craft = c.id;
+    btn.innerHTML = `<span class="craft-icon">${c.icon}</span>${c.id}<span class="craft-count">${count}</span>`;
+    btn.onclick = () => selectCraft(c.id);
+    nav.appendChild(btn);
+  });
+}
+
+function selectCraft(craftId) {
+  currentCraft = craftId;
+  selectedRecipe = null;
+  document.querySelectorAll('.craft-btn').forEach(b => b.classList.toggle('active', b.dataset.craft === craftId));
+  renderMain();
+}
+
+function selectRecipe(recipe) {
+  selectedRecipe = recipe;
+  // Pre-fill any NPC prices we know
+  recipe.ingredients.forEach(ing => {
+    if (ing.npc && !prices[ing.name]) prices[ing.name] = ing.npc;
+  });
+  renderMain();
+}
+
+/* ── RENDER MAIN ────────────────────────────────────────── */
+function renderMain() {
+  const main = document.getElementById('main');
+  if (!currentCraft) { main.innerHTML = `<div class="empty"><div class="empty-icon">⚒</div><div class="empty-title">Choose a craft to begin</div><div class="empty-sub">Select a guild from the sidebar</div></div>`; return; }
+
+  const craftRecipes = RECIPES.filter(r => r.craft === currentCraft);
+  const meta = CRAFTS.find(c => c.id === currentCraft);
+
+  let html = `<div class="page-head"><div class="page-title">${meta.icon} ${currentCraft}</div><div class="page-desc">${craftRecipes.length} recipes · Enter AH prices to calculate profit</div></div>`;
+
+  // Recipe list
+  html += `<input class="recipe-search" type="text" placeholder="Search recipes…" oninput="filterRecipes(this.value)" id="recipe-filter" style="display:block;width:100%;margin-bottom:1rem;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:14px;">`;
+  html += `<div class="recipe-list" id="recipe-list">`;
+  craftRecipes.forEach((r, i) => {
+    const sel = selectedRecipe === r ? ' selected' : '';
+    const subs = (r.subcrafts||[]).map(s => `<span class="tag sub">${s.craft} ${s.cap}</span>`).join('');
+    html += `<div class="recipe-card${sel}" onclick="selectRecipeByIndex(${i})">
+      <div class="rc-name">${r.name}</div>
+      <div class="rc-meta"><span class="tag">${r.crystal} · ${r.cap}</span>${subs}</div>
+      ${r.npcSell ? `<div class="rc-npc">NPC ${r.npcSell.toLocaleString()} gil</div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  if (selectedRecipe) {
+    html += renderCalc(selectedRecipe);
+  }
+
+  main.innerHTML = html;
+
+  // Re-highlight selected
+  if (selectedRecipe) {
+    const idx = craftRecipes.indexOf(selectedRecipe);
+    const cards = document.querySelectorAll('.recipe-card');
+    if (cards[idx]) cards[idx].classList.add('selected');
+  }
+}
+
+function filterRecipes(q) {
+  const cards = document.querySelectorAll('.recipe-card');
+  const craftRecipes = RECIPES.filter(r => r.craft === currentCraft);
+  cards.forEach((card, i) => {
+    const r = craftRecipes[i];
+    const match = !q || r.name.toLowerCase().includes(q.toLowerCase());
+    card.style.display = match ? '' : 'none';
+  });
+}
+
+function selectRecipeByIndex(i) {
+  const craftRecipes = RECIPES.filter(r => r.craft === currentCraft);
+  selectRecipe(craftRecipes[i]);
+}
+
+/* ── RENDER CALCULATOR ──────────────────────────────────── */
+function renderCalc(r) {
+  const subs = (r.subcrafts||[]).map(s => `<span class="tag sub">${s.craft} ${s.cap}</span>`).join(' ');
+  const tool = r.tool ? `<span class="tag">${r.tool}</span>` : '';
+  let yieldStr = `NQ: ${r.yield}`;
+  if (r.hqYield) yieldStr += ` · HQ1: ${r.hqYield}`;
+  if (r.hq2Yield) yieldStr += ` · HQ2: ${r.hq2Yield}`;
+  if (r.hq3Yield) yieldStr += ` · HQ3: ${r.hq3Yield}`;
+  if (r.hqResult) yieldStr += ` · HQ: ${r.hqResult}`;
+
+  let html = `<div class="calc-panel">
+    <div class="calc-title">${r.name}</div>
+    <div class="calc-subtitle">${r.crystal} Crystal · Cap ${r.cap} · ${yieldStr} ${subs}${tool}</div>
+    <div class="ing-grid">`;
+
+  // Crystal row
+  const crystalPrice = prices[r.crystal + ' Crystal'] || 0;
+  html += `<div class="ing-row">
+    <div class="ing-label">${r.crystal} Crystal <span class="ing-qty">×1</span></div>
+    <div class="ing-input"><input type="number" min="0" value="${crystalPrice}" onchange="setPrice('${r.crystal} Crystal', this.value)" placeholder="AH price"><span class="ing-unit">ea</span></div>
+  </div>`;
+
+  // Ingredient rows
+  r.ingredients.forEach(ing => {
+    const p = prices[ing.name] !== undefined ? prices[ing.name] : (ing.npc || 0);
+    const npcNote = ing.npc ? `<span style="font-size:10px;color:var(--gold-dim);margin-left:4px">NPC ${ing.npc.toLocaleString()}</span>` : '';
+    html += `<div class="ing-row">
+      <div class="ing-label">${ing.name} <span class="ing-qty">×${ing.qty}</span>${npcNote}</div>
+      <div class="ing-input"><input type="number" min="0" value="${p}" onchange="setPrice('${ing.name}', this.value)" placeholder="AH price"><span class="ing-unit">ea</span></div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  // Sell price
+  const sellPrice = prices['__sell_' + r.name] !== undefined ? prices['__sell_' + r.name] : (r.npcSell || 0);
+  html += `<div class="break-row">
+    <span class="break-label">Sell price / unit <span style="font-size:11px;color:var(--gold-dim)">${r.npcSell ? `(NPC: ${r.npcSell.toLocaleString()})` : '(enter AH price)'}</span></span>
+    <div class="break-input"><input type="number" min="0" value="${sellPrice}" onchange="setSell('${r.name}', this.value)"> <span style="font-size:11px;color:var(--text-faint);font-family:var(--mono)">gil/unit</span></div>
+  </div>
+  <div class="break-row">
+    <span class="break-label">Break rate</span>
+    <div class="break-input"><input type="number" min="0" max="100" value="${breakRate}" onchange="setBreak(this.value)"> <span style="font-size:11px;color:var(--text-faint);font-family:var(--mono)">%</span></div>
+  </div></div>`;
+
+  html += renderResults(r);
+  html += renderGPH(r);
+
+  return html;
+}
+
+/* ── CALCULATIONS ───────────────────────────────────────── */
+function calcCosts(r) {
+  const crystalPrice = prices[r.crystal + ' Crystal'] || 0;
+  let matCost = crystalPrice;
+  r.ingredients.forEach(ing => {
+    const p = prices[ing.name] !== undefined ? prices[ing.name] : (ing.npc || 0);
+    matCost += p * ing.qty;
+  });
+  return matCost;
+}
+
+function renderResults(r) {
+  const matCost = calcCosts(r);
+  const sellEa = prices['__sell_' + r.name] !== undefined ? prices['__sell_' + r.name] : (r.npcSell || 0);
+  const br = breakRate / 100;
+
+  // Expected yield per synth attempt accounting for breaks
+  // On break: lose crystal + ingredients, get 0 output
+  // On success: get yield units
+  // Expected cost per synth = matCost (always)
+  // Expected output per synth = yield * (1 - br)
+  const expectedYield = r.yield * (1 - br);
+  const costPerUnit = expectedYield > 0 ? matCost / expectedYield : Infinity;
+  const profitPerUnit = sellEa - costPerUnit;
+  const profitPerSynth = (sellEa * expectedYield) - matCost;
+  const breakeven = expectedYield > 0 ? matCost / expectedYield : 0;
+
+  let breakdownRows = `<tr><td>${r.crystal} Crystal ×1</td><td>${fmt(prices[r.crystal+' Crystal'] || 0)}</td></tr>`;
+  r.ingredients.forEach(ing => {
+    const p = prices[ing.name] !== undefined ? prices[ing.name] : (ing.npc || 0);
+    breakdownRows += `<tr><td>${ing.name} ×${ing.qty}</td><td>${fmt(p * ing.qty)}</td></tr>`;
+  });
+  breakdownRows += `<tr class="total-row"><td>Total per synth</td><td>${fmt(matCost)}</td></tr>`;
+
+  const profClass = profitPerSynth > 0 ? 'pos' : profitPerSynth < 0 ? 'neg' : 'dim';
+
+  return `<div class="calc-panel">
+    <div class="results-row">
+      <div class="stat-card"><div class="stat-label">Mat cost / synth</div><div class="stat-value">${fmt(matCost)}</div></div>
+      <div class="stat-card"><div class="stat-label">Cost / unit</div><div class="stat-value">${costPerUnit === Infinity ? '—' : fmt(costPerUnit)}</div></div>
+      <div class="stat-card"><div class="stat-label">Profit / synth</div><div class="stat-value ${profClass}">${profitPerSynth >= 0 ? '+' : ''}${fmt(profitPerSynth)}</div></div>
+      <div class="stat-card"><div class="stat-label">Break-even price</div><div class="stat-value dim">${fmt(breakeven)}</div></div>
+    </div>
+    <table class="breakdown"><tbody>${breakdownRows}</tbody></table>
+    ${r.npcSell ? `<div class="note">NPC resale: ${r.npcSell.toLocaleString()} gil · ${profitPerSynth > 0 ? 'Profitable at current prices' : `Need ${Math.ceil(breakeven).toLocaleString()} gil/unit to break even`}</div>` : ''}
+  </div>`;
+}
+
+function renderGPH(r) {
+  const matCost = calcCosts(r);
+  const sellEa = prices['__sell_' + r.name] !== undefined ? prices['__sell_' + r.name] : (r.npcSell || 0);
+  const br = breakRate / 100;
+  const expectedYield = r.yield * (1 - br);
+  const profitPerSynth = (sellEa * expectedYield) - matCost;
+  const profitPerHr = profitPerSynth * synthsPerHr;
+  const sessionGil = profitPerHr * hoursPerSess;
+  const gphClass = profitPerHr > 0 ? 'pos' : profitPerHr < 0 ? 'neg' : 'dim';
+
+  return `<div class="calc-panel">
+    <div class="calc-title" style="font-size:0.95rem;margin-bottom:0.75rem">Gil per hour</div>
+    <div class="gph-row">
+      <div class="gph-input"><label>Synths / hour</label><input type="number" min="1" value="${synthsPerHr}" onchange="setSPH(this.value)"></div>
+      <div class="gph-input"><label>Hours / session</label><input type="number" min="0.1" step="0.1" value="${hoursPerSess}" onchange="setHours(this.value)"></div>
+    </div>
+    <div class="results-row">
+      <div class="stat-card"><div class="stat-label">Profit / synth</div><div class="stat-value ${gphClass}">${profitPerSynth >= 0 ? '+' : ''}${fmt(profitPerSynth)}</div></div>
+      <div class="stat-card"><div class="stat-label">Gil / hour</div><div class="stat-value ${gphClass}">${fmt(profitPerHr)}</div></div>
+      <div class="stat-card"><div class="stat-label">Session synths</div><div class="stat-value dim">${Math.round(synthsPerHr * hoursPerSess).toLocaleString()}</div></div>
+      <div class="stat-card"><div class="stat-label">Session gil</div><div class="stat-value ${gphClass}">${sessionGil >= 0 ? '+' : ''}${fmt(sessionGil)}</div></div>
+    </div>
+    <div class="note">Synth rate varies by recipe complexity. Desnything runs ~136/hr; high-level gear synths are slower (~80–100/hr) due to longer animations and menu time.</div>
+  </div>`;
+}
+
+/* ── SETTERS ────────────────────────────────────────────── */
+function setPrice(name, val) { prices[name] = parseFloat(val) || 0; if (selectedRecipe) renderCalcInPlace(); }
+function setSell(name, val)  { prices['__sell_' + name] = parseFloat(val) || 0; if (selectedRecipe) renderCalcInPlace(); }
+function setBreak(val)       { breakRate = parseFloat(val) || 0; if (selectedRecipe) renderCalcInPlace(); }
+function setSPH(val)         { synthsPerHr = parseFloat(val) || 120; if (selectedRecipe) renderCalcInPlace(); }
+function setHours(val)       { hoursPerSess = parseFloat(val) || 1; if (selectedRecipe) renderCalcInPlace(); }
+
+function renderCalcInPlace() {
+  // Only re-render the calc panels, not the recipe list
+  const main = document.getElementById('main');
+  const panels = main.querySelectorAll('.calc-panel');
+  if (panels.length >= 1) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = renderCalc(selectedRecipe);
+    const newPanels = tempDiv.querySelectorAll('.calc-panel');
+    panels.forEach((p, i) => { if (newPanels[i]) p.outerHTML = newPanels[i].outerHTML; });
+    // Note: outerHTML replacement loses event listeners, simpler to just re-render fully but preserve scroll
+    const scrollY = window.scrollY;
+    renderMain();
+    window.scrollTo(0, scrollY);
+  }
+}
+
+function fmt(n) {
+  if (n === Infinity || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString() + ' gil';
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules
+data
+*.db
+*.db-*
+.git
+.env
+.cache
+npm-debug.log*
+.claude
+ffxi_craft_calc.html

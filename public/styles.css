@@ -1,0 +1,126 @@
+/* ── tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0e0d0b;
+  --surface:   #181510;
+  --panel:     #1f1c16;
+  --border:    rgba(180,150,80,0.18);
+  --border-hi: rgba(200,170,90,0.4);
+  --gold:      #c8a84a;
+  --gold-dim:  #7a6030;
+  --gold-pale: #e8d48a;
+  --text:      #e8dfc8;
+  --text-dim:  #8a7d60;
+  --text-faint:#4a4030;
+  --green:     #4a9e5c;
+  --red:       #c84040;
+  --blue:      #5888c8;
+  --radius:    3px;
+  --mono:      'Source Code Pro', monospace;
+  --serif:     'IM Fell English', Georgia, serif;
+  --sans:      'Source Sans 3', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+/* ── layout ─────────────────────────────────────────────── */
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.main { padding: 2rem; max-width: 860px; }
+
+/* ── sidebar ─────────────────────────────────────────────── */
+.sidebar-head { padding: 1.25rem 1rem 1rem; border-bottom: 1px solid var(--border); }
+.sidebar-logo { font-family: var(--serif); font-size: 1.1rem; color: var(--gold); line-height: 1.2; }
+.sidebar-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: var(--mono); letter-spacing: 0.05em; }
+.craft-nav { padding: 0.5rem 0; }
+.craft-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 1rem; background: none; border: none; cursor: pointer; color: var(--text-dim); font-family: var(--sans); font-size: 13px; text-align: left; transition: background 0.1s, color 0.1s; }
+.craft-btn:hover { background: rgba(200,168,74,0.06); color: var(--text); }
+.craft-btn.active { background: rgba(200,168,74,0.12); color: var(--gold); border-right: 2px solid var(--gold); }
+.craft-icon { font-size: 16px; width: 20px; text-align: center; }
+.craft-count { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+.sidebar-section { padding: 0.4rem 1rem 0.25rem; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); font-family: var(--mono); margin-top: 0.5rem; }
+.sidebar-meta { padding: 0.25rem 1rem 1rem; font-size: 10px; color: var(--text-dim); font-family: var(--mono); line-height: 1.6; }
+
+/* ── header ─────────────────────────────────────────────── */
+.page-head { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.page-title { font-family: var(--serif); font-size: 1.6rem; color: var(--gold-pale); font-style: italic; }
+.page-desc { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+/* ── recipe picker ───────────────────────────────────────── */
+.recipe-search { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.recipe-search input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; color: var(--text); font-family: var(--sans); font-size: 14px; }
+.recipe-search input:focus { outline: none; border-color: var(--border-hi); }
+.recipe-search input::placeholder { color: var(--text-faint); }
+
+.recipe-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 1.5rem; max-height: 320px; overflow-y: auto; }
+.recipe-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; transition: border-color 0.1s, background 0.1s; }
+.recipe-card:hover { border-color: var(--border-hi); background: rgba(200,168,74,0.05); }
+.recipe-card.selected { border-color: var(--gold); background: rgba(200,168,74,0.08); }
+.rc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.rc-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-family: var(--mono); }
+.rc-npc { font-size: 11px; color: var(--gold-dim); margin-top: 2px; }
+
+/* ── calculator ─────────────────────────────────────────── */
+.calc-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.calc-title { font-family: var(--serif); font-size: 1.1rem; color: var(--gold-pale); margin-bottom: 0.2rem; }
+.calc-subtitle { font-size: 12px; color: var(--text-dim); font-family: var(--mono); margin-bottom: 1rem; }
+
+.ing-grid { display: grid; grid-template-columns: 1fr auto; gap: 0; }
+.ing-row { display: contents; }
+.ing-row:not(:last-child) > * { border-bottom: 1px solid var(--border); }
+.ing-label { padding: 8px 0; font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ing-qty { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-left: 4px; }
+.ing-input { padding: 8px 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.ing-input input { width: 110px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.ing-input input:focus { outline: none; border-color: var(--border-hi); }
+.ing-unit { font-size: 11px; color: var(--text-faint); font-family: var(--mono); white-space: nowrap; }
+.ah-hint { font-size: 10px; color: var(--blue); font-family: var(--mono); margin-left: 4px; cursor: pointer; }
+.ah-hint:hover { text-decoration: underline; }
+.npc-hint { font-size: 10px; color: var(--gold-dim); margin-left: 4px; }
+
+/* break rate row */
+.break-row { display: flex; align-items: center; gap: 12px; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.break-label { font-size: 13px; color: var(--text-dim); flex: 1; }
+.break-input { display: flex; align-items: center; gap: 6px; }
+.break-input input { width: 70px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.break-input input:focus { outline: none; border-color: var(--border-hi); }
+
+/* ── results ─────────────────────────────────────────────── */
+.results-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; text-align: center; }
+.stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); font-family: var(--mono); margin-bottom: 4px; }
+.stat-value { font-family: var(--serif); font-size: 1.25rem; color: var(--text); }
+.stat-value.pos { color: var(--green); }
+.stat-value.neg { color: var(--red); }
+.stat-value.dim { color: var(--text-dim); }
+
+.breakdown { width: 100%; border-collapse: collapse; font-size: 12px; }
+.breakdown td { padding: 5px 0; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+.breakdown td:first-child { color: var(--text-dim); font-family: var(--sans); font-size: 13px; }
+.breakdown td:last-child { text-align: right; color: var(--text); }
+.breakdown .total-row td { border-top: 1px solid var(--border-hi); border-bottom: none; padding-top: 8px; color: var(--gold); font-weight: 600; }
+
+/* ── gph panel ───────────────────────────────────────────── */
+.gph-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.75rem; }
+.gph-input { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gph-input label { font-size: 13px; color: var(--text-dim); }
+.gph-input input { width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 8px; color: var(--text); font-family: var(--mono); font-size: 13px; text-align: right; }
+.gph-input input:focus { outline: none; border-color: var(--border-hi); }
+
+.note { font-size: 11px; color: var(--text-dim); padding: 6px 10px; border-left: 2px solid var(--gold-dim); background: rgba(200,168,74,0.04); margin-top: 0.75rem; font-style: italic; }
+
+/* ── empty / loading state ───────────────────────────────── */
+.empty { text-align: center; padding: 3rem 2rem; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.empty-title { font-family: var(--serif); font-size: 1.2rem; color: var(--text-dim); font-style: italic; }
+.empty-sub { font-size: 13px; color: var(--text-faint); margin-top: 0.5rem; }
+
+/* ── misc ────────────────────────────────────────────────── */
+.tag { display: inline-block; font-size: 10px; font-family: var(--mono); padding: 2px 6px; border-radius: 2px; background: rgba(200,168,74,0.12); color: var(--gold-dim); margin-right: 4px; }
+.tag.sub { background: rgba(88,136,200,0.12); color: var(--blue); }
+.divider { height: 1px; background: var(--border); margin: 1rem 0; }
+@media (max-width: 640px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .results-row { grid-template-columns: 1fr 1fr; }
+}
